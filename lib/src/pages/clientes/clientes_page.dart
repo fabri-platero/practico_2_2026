@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/cliente.dart';
+import '../../services/cliente_service.dart';
 import '../../utils/responsive.dart';
 
 class ClientesPage extends StatefulWidget {
@@ -11,17 +12,16 @@ class ClientesPage extends StatefulWidget {
 }
 
 class _ClientesPageState extends State<ClientesPage> {
-  Future<List<Cliente>> futureClientes() async {
-    await Future.delayed(const Duration(seconds: 2));
-    return [
-      Cliente(id: '1', nombre: 'Cliente 1', telefono: '1111111111'),
-      Cliente(id: '2', nombre: 'Cliente 2', telefono: '1111111111'),
-      Cliente(id: '3', nombre: 'Cliente 3', telefono: '1111111111'),
-    ];
-  }
+  final _clienteService = ClienteService();
 
-  Stream<List<Cliente>> getClientes() async* {
-    yield await futureClientes();
+  // Se crea UNA vez. Si lo creáramos dentro de build(), cada setState
+  // abriría una suscripción nueva a Firestore.
+  late final Stream<List<Cliente>> _streamClientes;
+
+  @override
+  void initState() {
+    super.initState();
+    _streamClientes = _clienteService.escucharClientes();
   }
 
   @override
@@ -33,7 +33,7 @@ class _ClientesPageState extends State<ClientesPage> {
       appBar: AppBar(title: const Text('Mis Clientes'), elevation: 0),
       body: SafeArea(
         child: StreamBuilder<List<Cliente>>(
-          stream: getClientes(),
+          stream: _streamClientes,
           builder: (context, asyncSnapshot) {
             if (asyncSnapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());

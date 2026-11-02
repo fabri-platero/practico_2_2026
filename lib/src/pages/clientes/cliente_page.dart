@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/cliente.dart';
+import '../../services/cliente_service.dart';
 import '../../utils/responsive.dart';
 
 class DetalleClientePage extends StatefulWidget {
@@ -64,18 +65,31 @@ class _DetalleClientePageState extends State<DetalleClientePage> {
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
 
-    //Logica de delete de Cliente ...
+    try {
+      // DELETE en Firestore.
+      await ClienteService().eliminarCliente(_clienteActual.id!);
 
-    if (mounted) {
-      Navigator.pop(context);
+      if (mounted) {
+        Navigator.pop(context); // cierra el diálogo de carga
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cliente eliminado'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cliente eliminado'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context); // vuelve a la lista
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // cierra el diálogo de carga aunque falle
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al eliminar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
