@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../models/cliente.dart';
+import '../../services/cliente_service.dart';
 import '../../utils/responsive.dart';
 
 class NuevoClientePage extends StatefulWidget {
@@ -29,7 +31,12 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
     setState(() => _isLoading = true);
 
     try {
-      //logica de create de Cliente ...
+      final nuevoCliente = Cliente(
+        nombre: _nombreController.text.trim(),
+        telefono: _telefonoController.text.trim(),
+      );
+      // CREATE: Firestore asigna el id automáticamente.
+      await ClienteService().crearCliente(nuevoCliente);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

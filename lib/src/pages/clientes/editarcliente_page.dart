@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/cliente.dart';
+import '../../services/cliente_service.dart';
 import '../../utils/responsive.dart';
 
 class EditarClientePage extends StatefulWidget {
@@ -39,7 +40,14 @@ class _EditarClientePageState extends State<EditarClientePage> {
     setState(() => _isLoading = true);
 
     try {
-      // Logica de Update para Cliente...
+      // Mismo id, datos nuevos.
+      final clienteEditado = Cliente(
+        id: widget.cliente.id,
+        nombre: _nombreController.text.trim(),
+        telefono: _telefonoController.text.trim(),
+      );
+      // UPDATE en Firestore.
+      await ClienteService().actualizarCliente(clienteEditado);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -48,8 +56,8 @@ class _EditarClientePageState extends State<EditarClientePage> {
             backgroundColor: Colors.green,
           ),
         );
-        //Navigator.pop(context, clienteEditado);
-        Navigator.pop(context, widget.cliente);
+        // Devolvemos el cliente editado para que la página de detalle se refresque.
+        Navigator.pop(context, clienteEditado);
       }
     } catch (e) {
       if (mounted) {
