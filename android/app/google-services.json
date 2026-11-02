@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "653027606525",
+    "project_id": "practico-2-prog-moviles",
+    "storage_bucket": "practico-2-prog-moviles.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:653027606525:android:b455c095fb294f4af8e394",
+        "android_client_info": {
+          "package_name": "com.example.practico_2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArF9x3eJr4JBqUjraB4ZEyZHr_8eMVA-8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
