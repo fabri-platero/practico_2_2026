@@ -125,7 +125,7 @@ class _ClientesPageState extends State<ClientesPage> {
           ),
           SizedBox(height: responsive.hp(2)),
 
-          // --- LISTVIEW DE CLIENTES ---
+          // clients---
           Expanded(
             child: ListView.builder(
               physics: const BouncingScrollPhysics(),
@@ -146,7 +146,7 @@ class _ClientesPageState extends State<ClientesPage> {
   }
 }
 
-// --- WIDGET DE LA TARJETA DEL CLIENTE ---
+// widget de la tarjeta del cliente :v ---
 class _ClienteTile extends StatelessWidget {
   final Cliente cliente;
   final Responsive responsive;
