@@ -79,17 +79,11 @@ Map<String, WidgetBuilder> getApplicationRoutes() {
       if (args is Cliente) {
         return DetalleClientePage(cliente: args);
       } else {
-        return DetalleClientePage(
-          cliente: Cliente(nombre: 'Cliente 1', telefono: '1111111111'),
-        );
-        // Descomentar una vez implementado el CRUD de Cleinte
-        /*
         return const Scaffold(
           body: Center(
-            child: Text('Error: No se proporcionó una ruta válida.'),
+            child: Text('Error: No se proporcionó un cliente para mostrar.'),
           ),
         );
-        */
       }
     },
     '/editar_cliente': (context) {
@@ -97,15 +91,11 @@ Map<String, WidgetBuilder> getApplicationRoutes() {
       if (args is Cliente) {
         return EditarClientePage(cliente: args);
       } else {
-        return EditarClientePage(
-          cliente: Cliente(nombre: 'Cliente 1', telefono: '1111111111'),
-        );
-        // Descomentar una vez implementado el CRUD de Cleinte
-        /*return const Scaffold(
+        return const Scaffold(
           body: Center(
             child: Text('Error: No se proporcionó un cliente para editar.'),
           ),
-        );*/
+        );
       }
     },
   };
