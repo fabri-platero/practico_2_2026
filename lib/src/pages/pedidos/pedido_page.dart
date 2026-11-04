@@ -6,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 // Ajusta estas rutas a tu proyecto
 import '../../models/pedido.dart';
 import '../../models/cliente.dart';
+import '../../services/cliente_service.dart';
+import '../../services/pedido_service.dart';
 import '../../utils/responsive.dart';
 
 class DetallePedidoPage extends StatefulWidget {
@@ -18,6 +20,9 @@ class DetallePedidoPage extends StatefulWidget {
 }
 
 class _DetallePedidoPageState extends State<DetallePedidoPage> {
+  final _clienteService = ClienteService();
+  final _pedidoService = PedidoService();
+
   late Pedido _pedidoActual;
   Cliente? _clienteCompleto;
   bool _isLoading = true;
@@ -31,18 +36,20 @@ class _DetallePedidoPageState extends State<DetallePedidoPage> {
 
   Future<void> _cargarDatosCliente() async {
     try {
-      // Logica de READ de Cliente
+      final cliente = await _clienteService.getCliente(_pedidoActual.idCliente);
       setState(() {
-        _clienteCompleto = Cliente(
-          id: '1',
-          nombre: 'Cliente',
-          telefono: '1111111111',
-        );
+        _clienteCompleto =
+            cliente ??
+            Cliente(
+              id: _pedidoActual.idCliente,
+              nombre: _pedidoActual.nombreCliente,
+              telefono: '',
+            );
         _isLoading = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      print('Error al cargar cliente: $e');
+      debugPrint('Error al cargar cliente: $e');
     }
   }
 
@@ -126,19 +133,26 @@ class _DetallePedidoPageState extends State<DetallePedidoPage> {
                 }
               });
 
-              // Guardamos en la base de datos (pasamos null en la imagen porque no la estamos editando)
-              // Completar la logica de Update de Pedido
-
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Pago registrado con éxito',
-                      style: TextStyle(color: Colors.white),
+              // Guardamos el pago en Firestore
+              try {
+                await _pedidoService.actualizarPedido(_pedidoActual);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Pago registrado con éxito',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      backgroundColor: Colors.green,
                     ),
-                    backgroundColor: Colors.green,
-                  ),
-                );
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error al registrar el pago: $e')),
+                  );
+                }
               }
             },
             child: const Text('Confirmar Pago'),
@@ -173,9 +187,19 @@ class _DetallePedidoPageState extends State<DetallePedidoPage> {
             ),
             onPressed: () async {
               Navigator.pop(ctx); // cierra el alerta
-              //Completar logica de DELETE de Pedido
-              if (mounted) {
-                Navigator.pop(context); // Vuelve a la lista
+              try {
+                if (_pedidoActual.id != null) {
+                  await _pedidoService.eliminarPedido(_pedidoActual.id!);
+                }
+                if (mounted) {
+                  Navigator.pop(context); // Vuelve a la lista
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error al eliminar el pedido: $e')),
+                  );
+                }
               }
             },
             child: const Text('Eliminar'),
@@ -273,10 +297,21 @@ class _DetallePedidoPageState extends State<DetallePedidoPage> {
     final bool estaPagado =
         _pedidoActual.pagoRealizado || _pedidoActual.diferencia <= 0;
 
+    // Comparamos solo por día (sin hora): un pedido que entrega hoy sigue
+    // siendo editable durante todo el día de hoy, no solo hasta la medianoche.
+    final now = DateTime.now();
+    final hoy = DateTime(now.year, now.month, now.day);
+    final fechaEntregaSinHora = DateTime(
+      _pedidoActual.fechaEntrega.year,
+      _pedidoActual.fechaEntrega.month,
+      _pedidoActual.fechaEntrega.day,
+    );
+    final bool puedeEditar = !fechaEntregaSinHora.isBefore(hoy);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detalle de Pedido'),
-        actions: DateTime.now().isBefore(_pedidoActual.fechaEntrega)
+        actions: puedeEditar
             ? [
                 IconButton(
                   icon: const Icon(Icons.edit_note_rounded),

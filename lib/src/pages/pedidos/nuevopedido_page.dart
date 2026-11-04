@@ -8,7 +8,11 @@ import 'package:image_picker/image_picker.dart';
 // Ajusta estas rutas a tu proyecto
 import '../../models/itemproducto.dart';
 import '../../models/cliente.dart';
+import '../../models/pedido.dart';
 import '../../models/producto.dart';
+import '../../services/cliente_service.dart';
+import '../../services/pedido_service.dart';
+import '../../services/producto_service.dart';
 import '../../utils/responsive.dart';
 
 class NuevoPedidoPage extends StatefulWidget {
@@ -19,8 +23,12 @@ class NuevoPedidoPage extends StatefulWidget {
 }
 
 class _NuevoPedidoPageState extends State<NuevoPedidoPage> {
+  final _clienteService = ClienteService();
+  final _productoService = ProductoService();
+  final _pedidoService = PedidoService();
+
   Cliente? _clienteSeleccionado;
-  List<ItemProducto> _items = [];
+  final List<ItemProducto> _items = [];
   bool _isLoading = false;
 
   File? _imagenSeleccionada;
@@ -30,11 +38,17 @@ class _NuevoPedidoPageState extends State<NuevoPedidoPage> {
   late DateTime _fechaEncargo;
   late DateTime _fechaEntrega;
 
+  late final Stream<List<Cliente>> _streamClientes;
+  late final Stream<List<Producto>> _streamProductos;
+
   @override
   void initState() {
     super.initState();
     _fechaEncargo = DateTime.now();
     _fechaEntrega = DateTime.now().add(const Duration(days: 7));
+
+    _streamClientes = _clienteService.escucharClientes();
+    _streamProductos = _productoService.escucharProductos();
 
     // Escuchamos los cambios en la seña para repintar la "Diferencia"
     _senaController.addListener(() => setState(() {}));
@@ -50,19 +64,6 @@ class _NuevoPedidoPageState extends State<NuevoPedidoPage> {
   double get _totalPedido => _items.fold(0, (sum, item) => sum + item.subtotal);
   double get _sena => double.tryParse(_senaController.text.trim()) ?? 0.0;
   double get _diferencia => _totalPedido - _sena;
-
-  Future<List<Cliente>> futureClientes() async {
-    await Future.delayed(const Duration(seconds: 2));
-    return [
-      Cliente(id: '1', nombre: 'Cliente 1', telefono: '1111111111'),
-      Cliente(id: '2', nombre: 'Cliente 2', telefono: '1111111111'),
-      Cliente(id: '3', nombre: 'Cliente 3', telefono: '1111111111'),
-    ];
-  }
-
-  Stream<List<Cliente>> getClientes() async* {
-    yield await futureClientes();
-  }
 
   // --- MÉTODOS DE UI ---
   void _agregarProducto(Producto producto) {
@@ -140,6 +141,7 @@ class _NuevoPedidoPageState extends State<NuevoPedidoPage> {
         setState(() => _imagenSeleccionada = File(pickedFile.path));
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error al seleccionar imagen')),
       );
@@ -168,18 +170,37 @@ class _NuevoPedidoPageState extends State<NuevoPedidoPage> {
 
     setState(() => _isLoading = true);
 
-    //Logica de CREATE Pedido
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('¡Pedido creado con éxito!'),
-          backgroundColor: Colors.green,
-        ),
+    try {
+      final nuevoPedido = Pedido(
+        idCliente: _clienteSeleccionado!.id!,
+        nombreCliente: _clienteSeleccionado!.nombre,
+        items: _items,
+        imagen: _imagenSeleccionada?.path ?? '',
+        sena: _sena,
+        fechaEntrega: _fechaEntrega,
+        fechaEncargo: _fechaEncargo,
+        pagoRealizado: _diferencia <= 0,
       );
-      Navigator.pop(context);
+
+      await _pedidoService.crearPedido(nuevoPedido);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('¡Pedido creado con éxito!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al crear el pedido: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -232,44 +253,51 @@ class _NuevoPedidoPageState extends State<NuevoPedidoPage> {
   }
 
   Widget _cliente(Responsive responsive, ThemeData theme) {
-    return StreamBuilder<List<Cliente>>(
-      stream: getClientes(),
-      builder: (context, snapshot) {
-        final clientes = snapshot.data ?? [];
-        return DropdownSearch<Cliente>(
-          items: (filter, s) => clientes,
-          compareFn: (item1, item2) => item1.id == item2.id,
-          selectedItem: _clienteSeleccionado,
-          // Le decimos al paquete qué atributo del objeto debe mostrar en pantalla
-          itemAsString: (Cliente c) => c.nombre,
-          onSelected: (Cliente? item) {
-            setState(() {
-              _clienteSeleccionado = item;
-            });
-          },
-          popupProps: PopupProps.menu(
-            showSearchBox: true,
-            searchFieldProps: const TextFieldProps(
+    // dropdown_search construye su InkWell interno con los widgets de
+    // material_ui (no los de package:flutter/material.dart), así que
+    // necesita un ancestro mui.Material propio para no tirar
+    // "No Material widget found".
+    return mui.Material(
+      type: mui.MaterialType.transparency,
+      child: StreamBuilder<List<Cliente>>(
+        stream: _streamClientes,
+        builder: (context, snapshot) {
+          final clientes = snapshot.data ?? [];
+          return DropdownSearch<Cliente>(
+            items: (filter, s) => clientes,
+            compareFn: (item1, item2) => item1.id == item2.id,
+            selectedItem: _clienteSeleccionado,
+            // Le decimos al paquete qué atributo del objeto debe mostrar en pantalla
+            itemAsString: (Cliente c) => c.nombre,
+            onSelected: (Cliente? item) {
+              setState(() {
+                _clienteSeleccionado = item;
+              });
+            },
+            popupProps: PopupProps.menu(
+              showSearchBox: true,
+              searchFieldProps: const TextFieldProps(
+                decoration: mui.InputDecoration(
+                  hintText: "Buscar cliente...",
+                  prefixIcon: Icon(Icons.search),
+                ),
+              ),
+              emptyBuilder: (context, searchEntry) =>
+                  Center(child: Text('No se encontró a "$searchEntry"')),
+            ),
+            // Configuración visual del botón principal
+            decoratorProps: DropDownDecoratorProps(
               decoration: mui.InputDecoration(
-                hintText: "Buscar cliente...",
-                prefixIcon: Icon(Icons.search),
+                labelText: 'Cliente seleccionado',
+                prefixIcon: Icon(
+                  Icons.person_search_rounded,
+                  color: theme.colorScheme.primary,
+                ),
               ),
             ),
-            emptyBuilder: (context, searchEntry) =>
-                Center(child: Text('No se encontró a "$searchEntry"')),
-          ),
-          // Configuración visual del botón principal
-          decoratorProps: DropDownDecoratorProps(
-            decoration: mui.InputDecoration(
-              labelText: 'Cliente seleccionado',
-              prefixIcon: Icon(
-                Icons.person_search_rounded,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -576,24 +604,11 @@ class _NuevoPedidoPageState extends State<NuevoPedidoPage> {
     );
   }
 
-  Future<List<Producto>> futureProductos() async {
-    await Future.delayed(const Duration(seconds: 2));
-    return [
-      Producto(id: '1', nombre: 'Producto 1', precio: 135060, imagen: ''),
-      Producto(id: '2', nombre: 'Producto 2', precio: 250000, imagen: ''),
-      Producto(id: '3', nombre: 'Producto 3', precio: 5862000, imagen: ''),
-    ];
-  }
-
-  Stream<List<Producto>> getProductos() async* {
-    yield await futureProductos();
-  }
-
   // MODAL PARA SELECCIONAR PRODUCTOS
   void _mostrarSelectorProductos(Responsive responsive, ThemeData theme) {
     FocusScope.of(context).unfocus();
 
-    final streamAislado = getProductos();
+    final streamAislado = _streamProductos;
 
     showModalBottomSheet(
       context: context,

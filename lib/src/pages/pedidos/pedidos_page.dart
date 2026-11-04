@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../models/itemproducto.dart';
-
-// Ajusta estas rutas a tu proyecto
 import '../../models/pedido.dart';
+import '../../services/pedido_service.dart';
 import '../../utils/responsive.dart';
 
 class PedidosPage extends StatefulWidget {
@@ -14,30 +12,16 @@ class PedidosPage extends StatefulWidget {
 }
 
 class _PedidosPageState extends State<PedidosPage> {
-  Future<List<Pedido>> futurePedidos() async {
-    await Future.delayed(const Duration(seconds: 2));
-    return [
-      Pedido(
-        idCliente: '1',
-        nombreCliente: 'Cliente 1',
-        items: [
-          ItemProducto(
-            idProducto: '1',
-            nombreProducto: 'Producto 1',
-            precioUnitario: 135060,
-          ),
-        ],
-        imagen: '',
-        sena: 13506,
-        fechaEntrega: DateTime(2023, 11, 12),
-        fechaEncargo: DateTime.now(),
-        pagoRealizado: false,
-      ),
-    ];
-  }
+  final _pedidoService = PedidoService();
 
-  Stream<List<Pedido>> getPedidos() async* {
-    yield await futurePedidos();
+  // Se crea UNA vez. Si lo creáramos dentro de build(), cada setState
+  // abriría una suscripción nueva a Firestore.
+  late final Stream<List<Pedido>> _streamPedidos;
+
+  @override
+  void initState() {
+    super.initState();
+    _streamPedidos = _pedidoService.escucharPedidos();
   }
 
   @override
@@ -49,7 +33,7 @@ class _PedidosPageState extends State<PedidosPage> {
       appBar: AppBar(title: const Text('Gestión de Pedidos'), elevation: 0),
       body: SafeArea(
         child: StreamBuilder<List<Pedido>>(
-          stream: getPedidos(),
+          stream: _streamPedidos,
           builder: (context, asyncSnapshot) {
             if (asyncSnapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());

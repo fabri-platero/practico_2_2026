@@ -1,6 +1,7 @@
 import 'utils/theme.dart';
 
 import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart' as mui;
 
 import 'routes/routes.dart';
 
@@ -15,6 +16,7 @@ class DimeelprecioApp extends StatelessWidget {
       routes: getApplicationRoutes(),
       initialRoute: '/',
       theme: AppTheme.lightTheme,
+      localizationsDelegates: mui.GlobalMaterialLocalizations.delegates,
     );
   }
 }

@@ -9,6 +9,9 @@ import '../../models/itemproducto.dart';
 import '../../models/pedido.dart';
 import '../../models/cliente.dart';
 import '../../models/producto.dart';
+import '../../services/cliente_service.dart';
+import '../../services/pedido_service.dart';
+import '../../services/producto_service.dart';
 
 import '../../utils/responsive.dart';
 
@@ -22,6 +25,10 @@ class EditarPedidoPage extends StatefulWidget {
 }
 
 class _EditarPedidoPageState extends State<EditarPedidoPage> {
+  final _clienteService = ClienteService();
+  final _productoService = ProductoService();
+  final _pedidoService = PedidoService();
+
   Cliente? _clienteSeleccionado;
   List<ItemProducto> _items = [];
   bool _isLoading = false;
@@ -35,9 +42,15 @@ class _EditarPedidoPageState extends State<EditarPedidoPage> {
   File? _nuevaImagenFile;
   final ImagePicker _picker = ImagePicker();
 
+  late final Stream<List<Cliente>> _streamClientes;
+  late final Stream<List<Producto>> _streamProductos;
+
   @override
   void initState() {
     super.initState();
+
+    _streamClientes = _clienteService.escucharClientes();
+    _streamProductos = _productoService.escucharProductos();
 
     _items = widget.pedido.items
         .map(
@@ -154,6 +167,7 @@ class _EditarPedidoPageState extends State<EditarPedidoPage> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error al seleccionar imagen')),
       );
@@ -186,36 +200,52 @@ class _EditarPedidoPageState extends State<EditarPedidoPage> {
       );
       return;
     }
+    if (_fechaEntrega.isBefore(_fechaEncargo)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'La fecha de entrega no puede ser anterior a la de encargo',
+          ),
+        ),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
-    // Logica de UPDATE de Pedido
-    if (mounted) {
-      setState(() => _isLoading = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cambios guardados con éxito'),
-          backgroundColor: Colors.green,
-        ),
+    try {
+      final pedidoEditado = Pedido(
+        id: widget.pedido.id,
+        idCliente: _clienteSeleccionado!.id!,
+        nombreCliente: _clienteSeleccionado!.nombre,
+        items: _items,
+        imagen: _nuevaImagenFile?.path ?? _imagenActualPath,
+        sena: _sena,
+        fechaEntrega: _fechaEntrega,
+        fechaEncargo: _fechaEncargo,
+        pagoRealizado: _diferencia <= 0,
       );
-      Navigator.pop(context);
-      //pedidoEditado,
-      //);
+
+      await _pedidoService.actualizarPedido(pedidoEditado);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cambios guardados con éxito'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, pedidoEditado);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar los cambios: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  Future<List<Cliente>> futureClientes() async {
-    await Future.delayed(const Duration(seconds: 2));
-    return [
-      Cliente(id: '1', nombre: 'Cliente 1', telefono: '1111111111'),
-      Cliente(id: '2', nombre: 'Cliente 2', telefono: '1111111111'),
-      Cliente(id: '3', nombre: 'Cliente 3', telefono: '1111111111'),
-    ];
-  }
-
-  Stream<List<Cliente>> getClientes() async* {
-    yield await futureClientes();
   }
 
   @override
@@ -236,8 +266,14 @@ class _EditarPedidoPageState extends State<EditarPedidoPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // 1. SELECCIÓN DE CLIENTE
-                    StreamBuilder<List<Cliente>>(
-                      stream: getClientes(),
+                    // dropdown_search usa el InkWell de material_ui (no el
+                    // de package:flutter/material.dart), así que necesita
+                    // un ancestro mui.Material propio para no tirar
+                    // "No Material widget found".
+                    mui.Material(
+                      type: mui.MaterialType.transparency,
+                      child: StreamBuilder<List<Cliente>>(
+                      stream: _streamClientes,
                       builder: (context, snapshot) {
                         if (!snapshot.hasData) {
                           return const LinearProgressIndicator();
@@ -292,6 +328,7 @@ class _EditarPedidoPageState extends State<EditarPedidoPage> {
                           ),
                         );
                       },
+                      ),
                     ),
                     SizedBox(height: responsive.hp(2)),
 
@@ -624,24 +661,11 @@ class _EditarPedidoPageState extends State<EditarPedidoPage> {
     );
   }
 
-  Future<List<Producto>> futureProductos() async {
-    await Future.delayed(const Duration(seconds: 2));
-    return [
-      Producto(id: '1', nombre: 'Producto 1', precio: 135060, imagen: ''),
-      Producto(id: '2', nombre: 'Producto 2', precio: 250000, imagen: ''),
-      Producto(id: '3', nombre: 'Producto 3', precio: 5862000, imagen: ''),
-    ];
-  }
-
-  Stream<List<Producto>> getProductos() async* {
-    yield await futureProductos();
-  }
-
   // --- MODAL PARA AGREGAR PRODUCTOS ---
   void _mostrarSelectorProductos(Responsive responsive, ThemeData theme) {
     FocusScope.of(context).unfocus();
 
-    final streamAislado = getProductos();
+    final streamAislado = _streamProductos;
 
     showModalBottomSheet(
       context: context,
