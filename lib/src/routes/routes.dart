@@ -27,15 +27,11 @@ Map<String, WidgetBuilder> getApplicationRoutes() {
       if (args is Producto) {
         return DetalleProductoPage(producto: args);
       } else {
-        return DetalleProductoPage(
-          producto: Producto(nombre: 'Producto 1', precio: 135060, imagen: ''),
-        );
-        //Descomentar esta seccion una vez implementado el CRUD
-        /*return const Scaffold(
+        return const Scaffold(
           body: Center(
-            child: Text('Error: No se proporcionó una ruta de imagen válida.'),
+            child: Text('Error: No se proporcionó un producto para mostrar.'),
           ),
-        );*/
+        );
       }
     },
     '/editar_producto': (context) {
@@ -43,15 +39,11 @@ Map<String, WidgetBuilder> getApplicationRoutes() {
       if (args is Producto) {
         return EditarProductoPage(producto: args);
       } else {
-        return EditarProductoPage(
-          producto: Producto(nombre: 'Producto 1', precio: 135060, imagen: ''),
-        );
-        //Descomentar esta seccion una vez implementado el CRUD
-        /*return const Scaffold(
+        return const Scaffold(
           body: Center(
             child: Text('Error: No se proporcionó un producto para editar.'),
           ),
-        );*/
+        );
       }
     },
     '/pedidos': (context) => const PedidosPage(),
