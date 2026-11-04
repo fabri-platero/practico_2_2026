@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../components/visorimagen_page.dart';
 import '../../models/producto.dart';
+import '../../services/producto_service.dart';
 import '../../utils/responsive.dart';
 
 class DetalleProductoPage extends StatefulWidget {
@@ -52,7 +53,7 @@ class _DetalleProductoPageState extends State<DetalleProductoPage> {
             ),
             onPressed: () async {
               Navigator.pop(ctx);
-              _ejecutarBorrado(context);
+              _ejecutarBorrado();
             },
             child: const Text('Sí, eliminar'),
           ),
@@ -61,8 +62,38 @@ class _DetalleProductoPageState extends State<DetalleProductoPage> {
     );
   }
 
-  Future<void> _ejecutarBorrado(BuildContext context) async {
-    //logica delete de Producto...
+  Future<void> _ejecutarBorrado() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      await ProductoService().eliminarProducto(_productoActual.id!);
+
+      if (mounted) {
+        Navigator.pop(context);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Producto eliminado'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al eliminar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -81,7 +112,7 @@ class _DetalleProductoPageState extends State<DetalleProductoPage> {
             onPressed: () async {
               final productoModificado = await Navigator.pushNamed(
                 context,
-                '/editar-producto',
+                '/editar_producto',
                 arguments: _productoActual,
               );
 
