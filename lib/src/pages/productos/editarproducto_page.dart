@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../components/visorimagen_page.dart';
 import '../../models/producto.dart';
+import '../../services/producto_service.dart';
+import '../../utils/imagen_utils.dart';
 import '../../utils/responsive.dart';
 
 class EditarProductoPage extends StatefulWidget {
@@ -118,7 +120,27 @@ class _EditarProductoPageState extends State<EditarProductoPage> {
       final String precioTexto = _precioController.text.replaceAll(',', '.');
       final double precio = double.parse(precioTexto);
 
-      //Logica de edicion de Producto ...
+      final String imagen = _imagenSeleccionada != null
+          ? await imagenABase64(_imagenSeleccionada!)
+          : widget.producto.imagen;
+
+      final productoEditado = Producto(
+        id: widget.producto.id,
+        nombre: _nombreController.text.trim(),
+        precio: precio,
+        imagen: imagen,
+      );
+      await ProductoService().actualizarProducto(productoEditado);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Producto actualizado con éxito'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, productoEditado);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
