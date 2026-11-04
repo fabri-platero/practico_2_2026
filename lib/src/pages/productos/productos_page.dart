@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../components/visorimagen_page.dart';
 import '../../models/producto.dart';
+import '../../services/producto_service.dart';
 import '../../utils/responsive.dart';
 
 class ProductosPage extends StatefulWidget {
@@ -12,17 +13,14 @@ class ProductosPage extends StatefulWidget {
 }
 
 class _ProductosPageState extends State<ProductosPage> {
-  Future<List<Producto>> futureProductos() async {
-    await Future.delayed(const Duration(seconds: 2));
-    return [
-      Producto(id: '1', nombre: 'Producto 1', precio: 135060, imagen: ''),
-      Producto(id: '2', nombre: 'Producto 2', precio: 250000, imagen: ''),
-      Producto(id: '3', nombre: 'Producto 3', precio: 5862000, imagen: ''),
-    ];
-  }
+  final _productoService = ProductoService();
 
-  Stream<List<Producto>> getProductos() async* {
-    yield await futureProductos();
+  late final Stream<List<Producto>> _streamProductos;
+
+  @override
+  void initState() {
+    super.initState();
+    _streamProductos = _productoService.escucharProductos();
   }
 
   @override
@@ -33,7 +31,7 @@ class _ProductosPageState extends State<ProductosPage> {
       appBar: AppBar(title: const Text('Mis Productos'), elevation: 0),
       body: SafeArea(
         child: StreamBuilder<List<Producto>>(
-          stream: getProductos(),
+          stream: _streamProductos,
           builder: (context, asyncSnapshot) {
             if (asyncSnapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
