@@ -3,6 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../models/producto.dart';
+import '../../services/producto_service.dart';
+import '../../utils/imagen_utils.dart';
 import '../../utils/responsive.dart';
 
 class NuevoProductoPage extends StatefulWidget {
@@ -98,7 +101,14 @@ class _NuevoProductoPageState extends State<NuevoProductoPage> {
       final String precioTexto = _precioController.text.replaceAll(',', '.');
       final double precio = double.parse(precioTexto);
 
-      //logica de create de Producto
+      final String imagen = await imagenABase64(_imagenSeleccionada!);
+
+      final nuevoProducto = Producto(
+        nombre: _nombreController.text.trim(),
+        precio: precio,
+        imagen: imagen,
+      );
+      await ProductoService().crearProducto(nuevoProducto);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
