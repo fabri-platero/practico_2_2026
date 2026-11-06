@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart' as mui;
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../components/visorimagen_page.dart';
 import '../../models/itemproducto.dart';
 import '../../models/pedido.dart';
 import '../../models/cliente.dart';
@@ -12,7 +13,7 @@ import '../../models/producto.dart';
 import '../../services/cliente_service.dart';
 import '../../services/pedido_service.dart';
 import '../../services/producto_service.dart';
-
+import '../../utils/imagen_utils.dart';
 import '../../utils/responsive.dart';
 
 class EditarPedidoPage extends StatefulWidget {
@@ -214,12 +215,16 @@ class _EditarPedidoPageState extends State<EditarPedidoPage> {
     setState(() => _isLoading = true);
 
     try {
+      final String imagen = _nuevaImagenFile != null
+          ? await imagenABase64(_nuevaImagenFile!)
+          : _imagenActualPath;
+
       final pedidoEditado = Pedido(
         id: widget.pedido.id,
         idCliente: _clienteSeleccionado!.id!,
         nombreCliente: _clienteSeleccionado!.nombre,
         items: _items,
-        imagen: _nuevaImagenFile?.path ?? _imagenActualPath,
+        imagen: imagen,
         sena: _sena,
         fechaEntrega: _fechaEntrega,
         fechaEncargo: _fechaEncargo,
@@ -515,30 +520,37 @@ class _EditarPedidoPageState extends State<EditarPedidoPage> {
                             decoration: BoxDecoration(
                               color: theme.colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(12),
-                              // Lógica para mostrar la nueva foto, o la vieja, o nada.
-                              image: _nuevaImagenFile != null
-                                  ? DecorationImage(
-                                      image: FileImage(_nuevaImagenFile!),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : (_imagenActualPath.isNotEmpty)
-                                  ? DecorationImage(
-                                      image: FileImage(File(_imagenActualPath)),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : null,
                             ),
-                            child:
-                                (_nuevaImagenFile == null &&
-                                    _imagenActualPath.isEmpty)
-                                ? const Center(
+                            // Lógica para mostrar la nueva foto, o la vieja
+                            // (base64 desde Firestore, vía VisorImagen), o nada.
+                            child: _nuevaImagenFile != null
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.file(
+                                      _nuevaImagenFile!,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                    ),
+                                  )
+                                : _imagenActualPath.isNotEmpty
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: SizedBox(
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                      child: VisorImagen(
+                                        imagen: _imagenActualPath,
+                                      ),
+                                    ),
+                                  )
+                                : const Center(
                                     child: Icon(
                                       Icons.add_a_photo,
                                       color: Colors.grey,
                                       size: 40,
                                     ),
-                                  )
-                                : null,
+                                  ),
                           ),
                         ),
 

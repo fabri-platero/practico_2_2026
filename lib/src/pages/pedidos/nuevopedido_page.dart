@@ -13,6 +13,7 @@ import '../../models/producto.dart';
 import '../../services/cliente_service.dart';
 import '../../services/pedido_service.dart';
 import '../../services/producto_service.dart';
+import '../../utils/imagen_utils.dart';
 import '../../utils/responsive.dart';
 
 class NuevoPedidoPage extends StatefulWidget {
@@ -171,11 +172,15 @@ class _NuevoPedidoPageState extends State<NuevoPedidoPage> {
     setState(() => _isLoading = true);
 
     try {
+      final String imagen = _imagenSeleccionada != null
+          ? await imagenABase64(_imagenSeleccionada!)
+          : '';
+
       final nuevoPedido = Pedido(
         idCliente: _clienteSeleccionado!.id!,
         nombreCliente: _clienteSeleccionado!.nombre,
         items: _items,
-        imagen: _imagenSeleccionada?.path ?? '',
+        imagen: imagen,
         sena: _sena,
         fechaEntrega: _fechaEntrega,
         fechaEncargo: _fechaEncargo,
