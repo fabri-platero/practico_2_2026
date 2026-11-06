@@ -1,9 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // Ajusta estas rutas a tu proyecto
+import '../../components/visorimagen_page.dart';
 import '../../models/pedido.dart';
 import '../../models/cliente.dart';
 import '../../services/cliente_service.dart';
@@ -265,7 +264,7 @@ class _DetallePedidoPageState extends State<DetallePedidoPage> {
               boundaryMargin: const EdgeInsets.all(100),
               minScale: 0.5,
               maxScale: 3,
-              child: Image.file(File(_pedidoActual.imagen)),
+              child: VisorImagen(imagen: _pedidoActual.imagen),
             ),
             Positioned(
               top: 40,
@@ -401,11 +400,11 @@ class _DetallePedidoPageState extends State<DetallePedidoPage> {
                     height: responsive.dp(6),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
-                      image: DecorationImage(
-                        image: FileImage(File(_pedidoActual.imagen)),
-                        fit: BoxFit.cover,
-                      ),
                       border: Border.all(color: theme.colorScheme.primary),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(7),
+                      child: VisorImagen(imagen: _pedidoActual.imagen),
                     ),
                   ),
                 ),
